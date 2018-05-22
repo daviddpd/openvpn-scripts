@@ -1,0 +1,7 @@
+#
+# Fairly Straight forward Juniper EX (possibly others) config
+#
+set interfaces vlan unit 2311 family inet address 172.18.0.9/30
+set protocols ospf area 0.0.0.0 interface vlan.2311 interface-type p2p
+set protocols ospf area 0.0.0.0 interface vlan.2311 hello-interval 10
+
