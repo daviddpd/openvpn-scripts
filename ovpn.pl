@@ -15,6 +15,7 @@ my ($opt, $usage) = describe_options(
 	[ 'help|h', "help, print usage", ],
 	[ 'connect', "Run the connect setup"  ], 
 	[ 'disconnect', "Run the disconnect cleanup" ], 
+	[ 'verbose', "verbose logging" ],
 	
 );
 my $dev = $ENV{'dev'};
@@ -73,8 +74,16 @@ sub get_routes {
 
     foreach my $r ( @v4_r ) {
         my $ip = new Net::IP ($r);
-        $config .= "push \"route " . $ip->ip() ." " . $ip->mask() . "\"\n"
+        my $line .= "push \"route " . $ip->ip() ." " . $ip->mask();
+        $config .= $line . "\"\n";
+    	if ( $opt->{'verbose'} ) {
+   		`logger -p local0.debug -t "openvpn.opvn[$pid:$dynconf]" " $dynconf"`;
+   	}	
     }
+
+    if ( $opt->{'verbose'} ) {
+   `logger -p local0.notice -t "openvpn.opvn[$pid]" "dynconf file $dynconf"`;
+   }
     
     open (FH, ">>", $dynconf );
     print FH $config;
