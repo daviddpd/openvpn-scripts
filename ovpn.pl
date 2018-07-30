@@ -16,19 +16,22 @@ my ($opt, $usage) = describe_options(
 	[ 'connect', "Run the connect setup"  ], 
 	[ 'disconnect', "Run the disconnect cleanup" ], 
 	[ 'verbose', "verbose logging" ],
+	[ 'dryrun|n', "dry run" ],
 	
 );
 my $dev = $ENV{'dev'};
 my $ip = $ENV{'ifconfig_pool_remote_ip'};
 my $pid = $ENV{'daemon_pid'} || 0;
-my $log;
+my $log = '';
 
 if ( $opt->{'connect'} ) { 
-    $log = `route add $ip -iface $dev`;
+	if ( !$opt->{'dryrun'} ) {
+	    $log = `route add $ip -iface $dev`;
+	}
     if ( -f "$ARGV[0]" ) {
         get_routes ($ARGV[0]);
     }
-} elsif ( $opt->{'disconnect'}  ) {
+} elsif ( $opt->{'disconnect'} && !$opt->{'dryrun'} ) {
     $log = `route delete $ip -iface $dev`;
 } else {
     $log = 'No CLI arguements were given.';
@@ -61,7 +64,9 @@ sub get_routes {
              foreach my $x ( @{$af->{'rt-entry'}} ) 
              {
                 foreach my $flag ( @{$x->{'flags_pretty'}} ) {
-                    if ( $flag =~ m/proto1/ ) {
+                    if ( ($flag =~ m/proto1/) || 
+                    	( (scalar @{$x->{'flags_pretty'}} == 1) && ( $flag =~ m/up/ ) ) 
+                    ) {
                      my $ip = new Net::IP ($x->{'destination'});
                      printf ( " %s %s %s \n", $x->{'interface-name'}, $x->{'destination'}, $ip->mask() )  if ($opt->{'verbose'});
                      $routes{$iv}{$x->{'destination'}} = 1;
@@ -84,9 +89,13 @@ sub get_routes {
     if ( $opt->{'verbose'} ) {
    `logger -p local0.notice -t "openvpn.opvn[$pid]" "dynconf file $dynconf"`;
    }
-    
-    open (FH, ">>", $dynconf );
-    print FH $config;
-    close FH;
+
+	if (!$opt->{'dryrun'} && (-f "$dynconf") ) {    
+		open (FH, ">>", $dynconf );
+		print FH $config;
+		close FH;
+    } else {
+    	print $config;
+    }
     
 }
